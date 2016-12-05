@@ -18,7 +18,7 @@
         "devgroup/yii2-data-structure-tools": "dev-master"
     },
     "require-dev": {
-        "devgroup/dotplant-dev": "~1.0",
+        "devgroup/dotplant-dev": "~1.0"
     },
     "autoload": {
         "psr-4": {
