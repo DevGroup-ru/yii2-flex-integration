@@ -1,0 +1,42 @@
+{
+    "name": "devgroup/yii2-flex-integration",
+    "description": "Data structure collections, helpers and utilities for yii2 ActiveRecord models(trees, sorts and etc.)",
+    "type": "yii2-extension",
+    "keywords": ["yii2","extension","integration","import","export"],
+    "license": "MIT",
+    "minimum-stability": "dev",
+    "authors": [
+        {
+            "name": "Alexander Kozhevnikov",
+            "email": "b37hr3z3n@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.5.0",
+        "yiisoft/yii2": "^2.0.10",
+        "devgroup/yii2-tag-dependency-helper": "~1.5",
+        "devgroup/yii2-data-structure-tools": "dev-master"
+    },
+    "require-dev": {
+        "devgroup/dotplant-dev": "~1.0",
+    },
+    "autoload": {
+        "psr-4": {
+            "DevGroup\\FlexIntegration\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "DevGroup\\FlexIntegration\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "asset-installer-paths": {
+            "npm-asset-library": "vendor/npm",
+            "bower-asset-library": "vendor/bower"
+        },
+        "migrationPath": [
+            "src/migrations"
+        ]
+    }
+}
