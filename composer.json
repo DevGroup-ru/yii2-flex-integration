@@ -1,6 +1,6 @@
 {
     "name": "devgroup/yii2-flex-integration",
-    "description": "Data structure collections, helpers and utilities for yii2 ActiveRecord models(trees, sorts and etc.)",
+    "description": "Flexible integration(import, export, sync) for yii2",
     "type": "yii2-extension",
     "keywords": ["yii2","extension","integration","import","export"],
     "license": "MIT",
