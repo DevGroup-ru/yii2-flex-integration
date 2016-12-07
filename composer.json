@@ -18,7 +18,10 @@
         "devgroup/yii2-data-structure-tools": "dev-master"
     },
     "require-dev": {
-        "devgroup/dotplant-dev": "~1.0"
+        "devgroup/dotplant-dev": "~1.0",
+        "codeception/base": "^2.2",
+        "codeception/verify": "^0.3.2",
+        "codeception/specify": "^0.4.5"
     },
     "autoload": {
         "psr-4": {
