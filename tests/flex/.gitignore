@@ -1,2 +1,6 @@
 *
 !.gitignore
+!in
+!out
+!tasks
+!tmp
