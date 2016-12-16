@@ -5,7 +5,15 @@ php:
   - 5.5
   - 5.6
   - 7.0
-#  - hhvm
+  - 7.1
+  - hhvm
+  - nightly
+
+matrix:
+  allow_failures:
+    - php: nightly
+    - php: 7.1
+    - php: hhvm
 
 # faster builds on new travis setup not using sudo
 sudo: false
@@ -31,4 +39,4 @@ before_script:
 
 script:
   - composer validate --strict
-  - composer exec codecept run --debug -vvv --steps
+  - composer exec codecept run -vvv
