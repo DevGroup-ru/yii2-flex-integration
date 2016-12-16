@@ -12,11 +12,17 @@ class AbstractEntity
     /** @var int Model PK */
     public $pk = -1;
 
+    /** @var null|array Search existing models by this attributes */
+    public $searchBy;
+
     /** @var string ID of entity inside this task document*/
     public $documentScopeId = '';
 
     /** @var bool */
     public $isNew = false;
+
+    /** @var array  */
+    public $attributes = [];
 
     /** @var AbstractEntityProperty[] */
     public $properties = [];
@@ -35,4 +41,5 @@ class AbstractEntity
      * @var Model mapped model
      */
     public $model;
+
 }

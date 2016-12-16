@@ -7,10 +7,10 @@ $config = [
 ];
 
 // merge common config
-$config = ArrayHelper::merge(include('common.php'), $config);
+$config = ArrayHelper::merge(include(__DIR__ . '/common.php'), $config);
 
-if (file_exists('console.local.php')) {
-    $config = ArrayHelper::merge($config, include('console.local.php'));
+if (file_exists(__DIR__ . '/console.local.php')) {
+    $config = ArrayHelper::merge($config, include(__DIR__ . '/console.local.php'));
 }
 
 return $config;

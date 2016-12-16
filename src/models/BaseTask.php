@@ -2,10 +2,18 @@
 
 namespace DevGroup\FlexIntegration\models;
 
+use DevGroup\FlexIntegration\base\DocumentConfiguration;
 use DevGroup\FlexIntegration\models\traits\TaskStorage;
 use yii;
+use yii\helpers\Json;
 
-class BaseTask extends yii\base\Model
+/**
+ * Class BaseTask
+ *
+ * @property string $document
+ * @package DevGroup\FlexIntegration\models
+ */
+abstract class BaseTask extends yii\base\Model
 {
     use TaskStorage;
 
@@ -17,11 +25,58 @@ class BaseTask extends yii\base\Model
      */
     public $taskType = self::TASK_TYPE_IMPORT;
 
-    /** @var string Filename of input document */
-    public $document = '';
+    /** @var DocumentConfiguration[] Input documents */
+    protected $documents = [];
 
     /** @var string  */
     public $name = '';
+
+    /**
+     * @param DocumentConfiguration[] $documents
+     */
+    public function setDocuments($documents)
+    {
+        $this->documents = [];
+        foreach ($documents as $doc) {
+            $this->documents[] = new DocumentConfiguration($doc);
+        }
+    }
+
+    /**
+     * @return DocumentConfiguration[]
+     */
+    public function getDocuments()
+    {
+        return $this->documents;
+    }
+
+    /**
+     * @return string json encoded attributes
+     */
+    public function serialize()
+    {
+        $array = $this->attributes;
+        $array['documents'] = [];
+        foreach ($this->documents as $doc) {
+            $array['documents'][] = $doc->attributes;
+        }
+        return Json::encode($array);
+    }
+
+    /**
+     * @param string $string Json string
+     *
+     * @return BaseTask
+     */
+    public static function unserialize($string)
+    {
+        $config = Json::decode($string);
+        $type = self::TASK_TYPE_IMPORT;
+        if (isset($config['taskType'])) {
+            $type = $config['taskType'];
+        }
+        return static::create($type, $config);
+    }
 
     /**
      * Creates needed task
@@ -35,5 +90,10 @@ class BaseTask extends yii\base\Model
         return $type === self::TASK_TYPE_IMPORT ? new ImportTask($config) : new ExportTask($config);
     }
 
-
+    /**
+     * @param array $config
+     *
+     * @return mixed
+     */
+    abstract public function run($config = []);
 }

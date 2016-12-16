@@ -1,4 +1,6 @@
 sku;name;price
 p1;"product uno";1.9
 p2;"product dos";1,1
-p3;" tres ";" $ 9,99"
+EXS-123;" tres ";" $ 1 789,99"
+;"empty sku";1.98
+"p2";"dublicate of product dos";11,8

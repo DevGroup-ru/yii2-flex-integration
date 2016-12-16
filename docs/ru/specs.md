@@ -10,6 +10,7 @@
 
 Общая логика для импорта:
 1. Map input data to abstract entity
+    - map input to abstract
 2. Reduce input data to abstract entity collection
 3. Prioritize and resolve dependencies, combine searchQueries
 4. Map Each abstract entity to our models(find or create)

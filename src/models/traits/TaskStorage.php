@@ -3,7 +3,9 @@
 namespace DevGroup\FlexIntegration\models\traits;
 
 use DevGroup\FlexIntegration\components\TaskRepository;
-use yii;
+use DevGroup\FlexIntegration\models\BaseTask;
+use Yii;
+use yii\helpers\Json;
 
 /**
  * Class TaskStorage
@@ -37,7 +39,9 @@ trait TaskStorage
     {
         return file_put_contents(
             $this->storedFilename(),
-            yii\helpers\Json::encode($this)
+            $this->serialize()
         ) > 0;
     }
+
+
 }

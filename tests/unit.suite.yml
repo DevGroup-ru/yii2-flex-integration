@@ -9,4 +9,4 @@ modules:
       - Asserts
       - Filesystem
       - Yii2:
-            part: init
+            part: [init, fixtures]

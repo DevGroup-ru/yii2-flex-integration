@@ -13,6 +13,8 @@ modules:
         Yii2:
             configFile: 'tests/config/test.php'
             cleanup: false
+paths:
+    log: tests/runtime/logs
 
 # To enable code coverage:
 coverage:
