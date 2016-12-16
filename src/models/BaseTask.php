@@ -10,7 +10,7 @@ use yii\helpers\Json;
 /**
  * Class BaseTask
  *
- * @property string $document
+ * @property DocumentConfiguration[] $documents
  * @package DevGroup\FlexIntegration\models
  */
 abstract class BaseTask extends yii\base\Model
@@ -93,7 +93,6 @@ abstract class BaseTask extends yii\base\Model
     /**
      * @param array $config
      *
-     * @return mixed
      */
-    abstract public function run($config = []);
+    abstract public function run(array $config = []);
 }

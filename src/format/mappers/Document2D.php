@@ -56,6 +56,9 @@ trait Document2D
                     }
                     $entity->searchBy[$mappableColumn->asSearch] = $value;
                 }
+                if ($mappableColumn->asPk !== false && $value > 0) {
+                    $entity->pk = $value;
+                }
             }
         }
 

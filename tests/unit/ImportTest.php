@@ -101,7 +101,10 @@ class ImportTest extends BaseTest
         $task = BaseTask::create(BaseTask::TASK_TYPE_IMPORT, $config);
         $this->assertInstanceOf(ImportTask::class, $task);
 
-        // check if we can read it
-        $task->run();
+        // first - check every step
+        $doc = $task->documents[0];
+        $entities = $task->mapDoc($doc);
+        $this->assertCount(4, $entities);
+        codecept_debug($entities);
     }
 }

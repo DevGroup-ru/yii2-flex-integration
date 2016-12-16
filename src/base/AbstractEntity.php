@@ -41,5 +41,4 @@ class AbstractEntity
      * @var Model mapped model
      */
     public $model;
-
 }
