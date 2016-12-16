@@ -1,7 +1,6 @@
 language: php
 
 php:
-  - 5.4
   - 5.5
   - 5.6
   - 7.0
@@ -38,5 +37,4 @@ before_script:
   - php yii_test migrate --interactive=0
 
 script:
-  - composer validate --strict
   - composer exec codecept run -vvv
