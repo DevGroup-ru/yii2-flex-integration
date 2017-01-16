@@ -34,6 +34,12 @@ abstract class FormatMapper extends Object
     /** @var string  */
     public $defaultEntityClass = '';
 
+    /** @var array  */
+    public $entitiesDecl = [];
+
+    /** @var array  */
+    public $reversedEntitiesDecl = [];
+
     /**
      * @param \DevGroup\FlexIntegration\models\BaseTask $task
      * @param string $document

@@ -2,8 +2,6 @@
 
 namespace DevGroup\FlexIntegration\abstractEntity\mappers;
 
-use Yii;
-
 class Typecast extends FieldMapper
 {
     public $type = 'float';
@@ -12,6 +10,12 @@ class Typecast extends FieldMapper
     const TYPE_FLOAT = 'float';
     const TYPE_BOOL = 'bool';
 
+    /**
+     * Typecasts string value. By-default casts to float.
+     * @param string $value
+     *
+     * @return bool|float|int
+     */
     public function map($value)
     {
         switch ($this->type) {

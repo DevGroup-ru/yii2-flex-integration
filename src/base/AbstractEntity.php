@@ -6,8 +6,11 @@ use yii\base\Model;
 
 class AbstractEntity
 {
-    /** @var string */
-    public $modelClassName = '';
+    /** @var string  */
+    public $key = '';
+
+    /** @var string Key in entities decl */
+    public $modelKey = '';
 
     /** @var int Model PK */
     public $pk = -1;

@@ -42,7 +42,7 @@ class ImportTest extends BaseTest
         $filename = 'import-test1.csv';
         copy($this->getDataDir() . '/' . $filename, $repository->inputFilesLocation . '/' . $filename);
 
-        $config = [
+        $taskConfig = [
             'documents' => [[
                 'filename' => $filename,
                 'formatMapper' => [
@@ -52,7 +52,7 @@ class ImportTest extends BaseTest
                     'schema' => [
                         'defaultList' => [
                             'entities' => [
-                                'product' => 'DotPlant\Store\models\goods\Product',
+                                'DotPlant\Store\models\goods\Product' => 'product',
                             ],
                             'defaultEntity' => 'product',
                             'defaultMappers' => [
@@ -63,6 +63,7 @@ class ImportTest extends BaseTest
                                     'field' => 'sku',
                                     'type' => 'attribute',
                                     'asSearch' => 'sku',
+                                    'asDocumentScopeId' => true,
                                     'skipRowOnEmptyValue' => true,
                                 ],
                                 1 => [
@@ -98,7 +99,7 @@ class ImportTest extends BaseTest
         ];
 
         // create task
-        $task = BaseTask::create(BaseTask::TASK_TYPE_IMPORT, $config);
+        $task = BaseTask::create(BaseTask::TASK_TYPE_IMPORT, $taskConfig);
         $this->assertInstanceOf(ImportTask::class, $task);
 
         // first - check every step
@@ -106,5 +107,15 @@ class ImportTest extends BaseTest
         $entities = $task->mapDoc($doc);
         $this->assertCount(4, $entities);
         codecept_debug($entities);
+
+        // check reduce to collections
+        $collections = [];
+        $task->reduceDoc($doc, $entities, $collections);
+        codecept_debug($collections);
+
+        $this->assertArrayHasKey('product', $collections);
+        // why 3? We have default on duplicate action = SKIP
+        $this->assertCount(3, $collections['product']->entities);
+
     }
 }

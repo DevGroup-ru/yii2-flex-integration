@@ -26,12 +26,6 @@ class MappableColumn extends Object
     /** @var string entity key in AbstractEntityCollection */
     public $entity = '';
 
-    /**
-     * @var string Classname of corresponding entity model
-     *             @todo Maybe will be deleted and entity map of document will be used for leveraging RAM usage???
-     */
-    public $entityModel = '';
-
     /** @var bool If set to true and final value after all mappings is empty - skip the entire row */
     public $skipRowOnEmptyValue = false;
 
@@ -61,7 +55,7 @@ class MappableColumn extends Object
 
     /**
      * @param AbstractEntity $entity
-     * @param mixed          $value
+     * @param mixed          $value Mapped value
      *
      * @throws \yii\base\NotSupportedException
      */
@@ -78,6 +72,18 @@ class MappableColumn extends Object
             default:
                 $entity->attributes[$this->field] = $value;
                 break;
+        }
+        if ($this->asSearch !== false) {
+            if ($entity->searchBy === null) {
+                $entity->searchBy = [];
+            }
+            $entity->searchBy[$this->asSearch] = $value;
+        }
+        if ($this->asPk !== false && $value > 0) {
+            $entity->pk = $value;
+        }
+        if ($this->asDocumentScopeId === true) {
+            $entity->documentScopeId = "{$entity->modelKey}###$value";
         }
     }
 }

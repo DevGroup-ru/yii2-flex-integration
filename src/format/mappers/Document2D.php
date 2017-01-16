@@ -24,6 +24,9 @@ trait Document2D
      */
     protected $listMappers = [];
 
+    /** @var MappableColumn[] */
+    protected $processedSchema = [];
+
     /**
      * @param array  $row
      * @param string $schemaList
@@ -32,9 +35,10 @@ trait Document2D
      */
     public function processRow($row, $schemaList = 'defaultList')
     {
+        /** @var AbstractEntity[] Entities for this row */
         $entities = [];
-        $schema = $this->prepareListSchema($schemaList);
-        foreach ($schema as $index => $mappableColumn) {
+        $this->processedSchema = $this->prepareListSchema($schemaList);
+        foreach ($this->processedSchema as $index => $mappableColumn) {
             if (isset($row[$index])) {
                 /** @var AbstractEntity $entity */
                 $entity = $this->ensureEntity($entities, $mappableColumn);
@@ -49,16 +53,6 @@ trait Document2D
                 }
 
                 $mappableColumn->bindToEntity($entity, $value);
-
-                if ($mappableColumn->asSearch !== false) {
-                    if ($entity->searchBy === null) {
-                        $entity->searchBy = [];
-                    }
-                    $entity->searchBy[$mappableColumn->asSearch] = $value;
-                }
-                if ($mappableColumn->asPk !== false && $value > 0) {
-                    $entity->pk = $value;
-                }
             }
         }
 
@@ -75,7 +69,8 @@ trait Document2D
     {
         if (isset($entities[$mappableColumn->entity]) === false) {
             $abstract = new AbstractEntity();
-            $abstract->modelClassName = $mappableColumn->entityModel;
+            $abstract->modelClassName = $this->reversedEntitiesDecl[$mappableColumn->entity];
+            $abstract->modelKey = $mappableColumn->entity;
 
             $entities[$mappableColumn->entity] = $abstract;
         }
@@ -110,9 +105,10 @@ trait Document2D
             $defaultMappers = isset($schema['defaultMappers']) ? $schema['defaultMappers'] : [
                 TrimString::class,
             ];
-            $entitiesDecl = isset($schema['entities']) ? $schema['entities'] : [
+            $this->entitiesDecl = isset($schema['entities']) ? $schema['entities'] : [
                 $defaultEntity => Model::class,
             ];
+            $this->reversedEntitiesDecl = array_flip($this->entitiesDecl);
 
             /** @var array $columns */
             $columns = $schema['columns'];
@@ -141,9 +137,7 @@ trait Document2D
                 }
                 $mapper->mappers = $fieldMappers;
 
-                if (isset($entitiesDecl[$mapper->entity])) {
-                    $mapper->entityModel = $entitiesDecl[$mapper->entity];
-                } else {
+                if (isset($this->reversedEntitiesDecl[$mapper->entity]) === false) {
                     throw new \InvalidArgumentException('Field tries to map to undeclared entity: ' . $mapper->entity);
                 }
 

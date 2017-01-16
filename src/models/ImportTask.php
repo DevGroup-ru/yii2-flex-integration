@@ -3,9 +3,11 @@
 namespace DevGroup\FlexIntegration\models;
 
 use DevGroup\FlexIntegration\base\AbstractEntity;
+use DevGroup\FlexIntegration\base\AbstractEntityCollection;
 use DevGroup\FlexIntegration\base\DocumentConfiguration;
 use DevGroup\FlexIntegration\format\FormatMapper;
-use yii;
+use DevGroup\FlexIntegration\format\FormatReducer;
+use Yii;
 
 class ImportTask extends BaseTask
 {
@@ -18,11 +20,13 @@ class ImportTask extends BaseTask
     public function run(array $config = [])
     {
         Yii::configure($this, $config);
+        $collections = [];
         foreach ($this->documents as $doc) {
             /** @var AbstractEntity[] $entities */
             $entities = $this->mapDoc($doc);
-            file_put_contents('/tmp/flex.json', yii\helpers\Json::encode($entities, JSON_PRETTY_PRINT));
+
             // reduce here
+            $this->reduceDoc($doc, $entities, $collections);
         }
     }
 
@@ -36,5 +40,18 @@ class ImportTask extends BaseTask
         /** @var FormatMapper $formatMapper */
         $formatMapper = Yii::createObject($doc->formatMapper);
         return $formatMapper->mapInputDocument($this, $doc->importFilename());
+    }
+
+    /**
+     * @param \DevGroup\FlexIntegration\base\DocumentConfiguration $doc
+     * @param AbstractEntity[]                                     $entities
+     * @param AbstractEntityCollection[]                           $collections
+     * @return AbstractEntityCollection[]
+     */
+    public function reduceDoc(DocumentConfiguration $doc, array $entities, array &$collections)
+    {
+        /** @var FormatReducer $formatReducer */
+        $formatReducer = Yii::createObject($doc->formatReducer);
+        return $formatReducer->reduceToCollections($entities, $collections);
     }
 }

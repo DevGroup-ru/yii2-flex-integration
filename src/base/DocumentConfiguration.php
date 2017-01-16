@@ -3,6 +3,7 @@
 namespace DevGroup\FlexIntegration\base;
 
 use DevGroup\FlexIntegration\components\TaskRepository;
+use DevGroup\FlexIntegration\format\reducers\DefaultReducer;
 use Yii;
 use yii\base\Model;
 
@@ -13,7 +14,9 @@ class DocumentConfiguration extends Model
 
     public $formatMapper = [];
 
-    public $formatReducer = [];
+    public $formatReducer = [
+        'class' => DefaultReducer::class,
+    ];
 
     /**
      * @return string
