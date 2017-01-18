@@ -7,6 +7,7 @@ use DevGroup\FlexIntegration\base\AbstractEntity;
 use DevGroup\FlexIntegration\base\MappableColumn;
 use Yii;
 use yii\base\Model;
+use yii\helpers\ArrayHelper;
 
 trait Document2D
 {
@@ -26,6 +27,8 @@ trait Document2D
 
     /** @var MappableColumn[] */
     protected $processedSchema = [];
+
+
 
     /**
      * @param array  $row
@@ -69,7 +72,6 @@ trait Document2D
     {
         if (isset($entities[$mappableColumn->entity]) === false) {
             $abstract = new AbstractEntity();
-            $abstract->modelClassName = $this->reversedEntitiesDecl[$mappableColumn->entity];
             $abstract->modelKey = $mappableColumn->entity;
 
             $entities[$mappableColumn->entity] = $abstract;
@@ -105,10 +107,16 @@ trait Document2D
             $defaultMappers = isset($schema['defaultMappers']) ? $schema['defaultMappers'] : [
                 TrimString::class,
             ];
-            $this->entitiesDecl = isset($schema['entities']) ? $schema['entities'] : [
-                $defaultEntity => Model::class,
-            ];
-            $this->reversedEntitiesDecl = array_flip($this->entitiesDecl);
+            $this->entitiesDecl = ArrayHelper::merge(
+                $this->entitiesDecl,
+                isset($schema['entities']) ? $schema['entities'] : [
+                    $defaultEntity => [
+                        'class' => Model::class,
+                    ],
+                ]
+            );
+            $this->ensureEntitiesDeclOk();
+
 
             /** @var array $columns */
             $columns = $schema['columns'];
@@ -130,18 +138,18 @@ trait Document2D
                     }
                     $fieldMappers[$i] = Yii::createObject($mapperConfig);
                 }
-                /** @var MappableColumn $mapper */
-                $mapper = Yii::createObject($config);
-                if ($mapper->entity === '') {
-                    $mapper->entity = $defaultEntity;
+                /** @var MappableColumn $mappableColumn */
+                $mappableColumn = Yii::createObject($config);
+                if ($mappableColumn->entity === '') {
+                    $mappableColumn->entity = $defaultEntity;
                 }
-                $mapper->mappers = $fieldMappers;
+                $mappableColumn->mappers = $fieldMappers;
 
-                if (isset($this->reversedEntitiesDecl[$mapper->entity]) === false) {
-                    throw new \InvalidArgumentException('Field tries to map to undeclared entity: ' . $mapper->entity);
+                if (isset($this->entitiesDecl[$mappableColumn->entity]) === false) {
+                    throw new \InvalidArgumentException('Field tries to map to undeclared entity: ' . $mappableColumn->entity);
                 }
-
-                $mappers[$index] = $mapper;
+                $mappableColumn->postConfig($this);
+                $mappers[$index] = $mappableColumn;
             }
 
             $this->listMappers[$schemaList] = $mappers;

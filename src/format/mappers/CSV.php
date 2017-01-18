@@ -37,12 +37,11 @@ class CSV extends FormatMapper
                 // we'r skipping first lines as specified
                 continue;
             }
-            $result = $this->processRow($data);
+            $result = $this->processRow($data, md5($document));
             foreach ($result as $abstractEntity) {
                 $entities[] = $abstractEntity;
             }
         }
-
         fclose($f);
         return $entities;
     }

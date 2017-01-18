@@ -3,9 +3,12 @@
 use DevGroup\FlexIntegration\abstractEntity\mappers\Replace;
 use DevGroup\FlexIntegration\abstractEntity\mappers\TrimString;
 use DevGroup\FlexIntegration\abstractEntity\mappers\Typecast;
+use DevGroup\FlexIntegration\abstractEntity\mappers\UppercaseString;
+use DevGroup\FlexIntegration\base\MappableColumn;
 use DevGroup\FlexIntegration\format\mappers\CSV;
 use DevGroup\FlexIntegration\models\BaseTask;
 use DevGroup\FlexIntegration\models\ImportTask;
+use DevGroup\FlexIntegration\Tests\models\Product;
 
 class ImportTest extends BaseTest
 {
@@ -38,64 +41,112 @@ class ImportTest extends BaseTest
     {
         $repository = $this->flex()->taskRepository;
 
-                // prepare input document
+        // prepare input document
         $filename = 'import-test1.csv';
         copy($this->getDataDir() . '/' . $filename, $repository->inputFilesLocation . '/' . $filename);
+        $filename2 = 'import-test1_categories.csv';
+        copy($this->getDataDir() . '/' . $filename2, $repository->inputFilesLocation . '/' . $filename2);
+
 
         $taskConfig = [
-            'documents' => [[
-                'filename' => $filename,
-                'formatMapper' => [
-                    'class' => CSV::class,
-                    'delimiter' => ';',
-                    'skipLinesFromTop' => 1,
-                    'schema' => [
-                        'defaultList' => [
-                            'entities' => [
-                                'DotPlant\Store\models\goods\Product' => 'product',
-                            ],
-                            'defaultEntity' => 'product',
-                            'defaultMappers' => [
-                                TrimString::class,
-                            ],
-                            'columns' => [
-                                0 => [
-                                    'field' => 'sku',
-                                    'type' => 'attribute',
-                                    'asSearch' => 'sku',
-                                    'asDocumentScopeId' => true,
-                                    'skipRowOnEmptyValue' => true,
-                                ],
-                                1 => [
-                                    'field' => 'name',
-                                    'mappers' => [
-                                        TrimString::class,
+            'documents' => [
+                0 => [
+                    'filename' => $filename,
+                    'formatMapper' => [
+                        'class' => CSV::class,
+                        'delimiter' => ';',
+                        'skipLinesFromTop' => 1,
+                        'schema' => [
+                            'defaultList' => [
+                                'entities' => [
+                                    'product' => [
+                                        'class' => 'DevGroup\FlexIntegration\Tests\models\Product',
                                     ],
                                 ],
-                                2 => [
-                                    'field' => 'price',
-                                    'type' => 'attribute',
-                                    'mappers' => [
-                                        TrimString::class,
-                                        [
-                                            'class' => Replace::class,
-                                            'search' => ',',
-                                            'replace' => '.',
+                                'defaultEntity' => 'product',
+                                'defaultMappers' => [
+                                    TrimString::class,
+                                ],
+                                'columns' => [
+                                    0 => [
+                                        'field' => 'sku',
+                                        'type' => MappableColumn::TYPE_ATTRIBUTE,
+                                        'asSearch' => 'sku',
+                                        'asDocumentScopeId' => true,
+                                        'skipRowOnEmptyValue' => true,
+                                    ],
+                                    1 => [
+                                        'field' => 'name',
+                                        'mappers' => [
+                                            TrimString::class,
                                         ],
-                                        [
-                                            'class' => Replace::class,
-                                            'search' => '/[^0-9\.]/i',
-                                            'replace' => '',
-                                            'isRegExp' => true,
+                                    ],
+                                    2 => [
+                                        'field' => 'price',
+                                        'type' => MappableColumn::TYPE_ATTRIBUTE,
+                                        'mappers' => [
+                                            TrimString::class,
+                                            [
+                                                'class' => Replace::class,
+                                                'search' => ',',
+                                                'replace' => '.',
+                                            ],
+                                            [
+                                                'class' => Replace::class,
+                                                'search' => '/[^0-9\.]/i',
+                                                'replace' => '',
+                                                'isRegExp' => true,
+                                            ],
+                                            Typecast::class,
                                         ],
-                                        Typecast::class,
+                                    ],
+                                    3 => [
+                                        'field' => 'categories',
+                                        'type' => MappableColumn::TYPE_RELATION,
+                                        'mappers' => [
+                                            // find by attribute?
+                                        ],
                                     ],
                                 ],
                             ],
                         ],
                     ],
                 ],
-            ]],
+                1 => [
+                    'filename' => $filename2,
+                    'formatMapper' => [
+                        'class' => CSV::class,
+                        'delimiter' => ';',
+                        'skipLinesFromTop' => 1,
+                        'schema' => [
+                            'defaultList' => [
+                                'entities' => [
+                                    'category' => [
+                                        'class' => 'DevGroup\FlexIntegration\Tests\models\Category',
+                                    ],
+                                ],
+                                'defaultEntity' => 'category',
+                                'defaultMappers' => [
+                                    TrimString::class,
+                                ],
+                                'columns' => [
+                                    0 => [
+                                        'asPk' => true,
+                                        'field' => 'id',
+                                    ],
+                                    1 => [
+                                        'field' => 'name',
+                                        'mappers' => [
+                                            TrimString::class,
+                                            UppercaseString::class,
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ]
+            ],
         ];
 
         // create task
@@ -105,17 +156,27 @@ class ImportTest extends BaseTest
         // first - check every step
         $doc = $task->documents[0];
         $entities = $task->mapDoc($doc);
-        $this->assertCount(4, $entities);
-        codecept_debug($entities);
+        $this->assertCount(5, $entities);
 
         // check reduce to collections
         $collections = [];
         $task->reduceDoc($doc, $entities, $collections);
-        codecept_debug($collections);
+
+        $docCategories = $task->documents[1];
+        $entities = $task->mapDoc($docCategories);
+        $this->assertCount(3, $entities);
+        $task->reduceDoc($docCategories, $entities, $collections);
 
         $this->assertArrayHasKey('product', $collections);
-        // why 3? We have default on duplicate action = SKIP
-        $this->assertCount(3, $collections['product']->entities);
+        $this->assertArrayHasKey('category', $collections);
+        // why 4? We have default on duplicate action = SKIP and one duplicated row in csv file
+        $this->assertCount(4, $collections['product']->entities);
+        $this->assertCount(3, $collections['category']->entities);
 
+        // check non prioritized order
+        $this->assertSame(['product', 'category'], array_keys($collections));
+        $collections = $task->prioritizeCollections($collections);
+        // check prioritized order
+        $this->assertSame(['category', 'product'], array_keys($collections));
     }
 }

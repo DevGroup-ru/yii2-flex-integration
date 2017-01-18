@@ -13,12 +13,6 @@ class AbstractEntityCollection
     /** @var string Key for identifying dependencies */
     public $key = '';
 
-//    /**
-//     * @var string[] Array of keys for abstract entities we depend on
-//     * @todo Not implemented yet, will be implemented a bit later
-//     */
-//    public $depends = [];
-
     /**
      * Puts entity into collection
      * @param AbstractEntity $entity
@@ -28,7 +22,7 @@ class AbstractEntityCollection
      */
     public function put($entity, $onDuplicate = FormatReducer::ON_DUPLICATE_SKIP)
     {
-        $uuid = $entity->documentScopeId === '' ? uniqid($entity->modelKey, true) : $entity->documentScopeId;
+        $uuid = $entity->documentScopeId === '' ? uniqid("~~~_{$entity->modelKey}", true) : $entity->documentScopeId;
         if (isset($this->entities[$uuid])) {
             if ($onDuplicate === FormatReducer::ON_DUPLICATE_FAIL) {
                 throw new DuplicateEntity('', [

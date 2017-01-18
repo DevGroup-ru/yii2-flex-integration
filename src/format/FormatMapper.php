@@ -37,9 +37,6 @@ abstract class FormatMapper extends Object
     /** @var array  */
     public $entitiesDecl = [];
 
-    /** @var array  */
-    public $reversedEntitiesDecl = [];
-
     /**
      * @param \DevGroup\FlexIntegration\models\BaseTask $task
      * @param string $document
@@ -47,4 +44,13 @@ abstract class FormatMapper extends Object
      * @return AbstractEntity[]
      */
     abstract public function mapInputDocument(BaseTask $task, $document);
+
+    public function ensureEntitiesDeclOk()
+    {
+        foreach ($this->entitiesDecl as &$value) {
+            if (false === array_key_exists('depends', $value)) {
+                $value['depends'] = [];
+            }
+        }
+    }
 }

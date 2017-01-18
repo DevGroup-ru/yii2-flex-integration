@@ -3,6 +3,7 @@
 namespace DevGroup\FlexIntegration\base;
 
 use DevGroup\FlexIntegration\abstractEntity\mappers\FieldMapper;
+use DevGroup\FlexIntegration\format\FormatMapper;
 use yii\base\NotSupportedException;
 use yii\base\Object;
 
@@ -39,18 +40,34 @@ class MappableColumn extends Object
     public $asDocumentScopeId = false;
 
     /**
+     * @var string Delimiter used for joining multiple values for field.
+     */
+    public $multipleValuesDelimiter = '|';
+
+    /**
      * @param string $value
      *
      * @return mixed
      */
     public function map($value)
     {
-        foreach ($this->mappers as $mapper) {
-            if ($mapper->isApplicable($value)) {
-                $value = $mapper->map($value);
+        $valueArray =
+            $this->multipleValuesDelimiter !== ''
+                ? explode($this->multipleValuesDelimiter, $value)
+                : [ $value ];
+
+        foreach ($valueArray as &$item) {
+            foreach ($this->mappers as $mapper) {
+                if ($mapper->isApplicable($item)) {
+                    $item = $mapper->map($item);
+                }
             }
         }
-        return $value;
+
+        return
+            count($valueArray) === 1
+                ? reset($valueArray)
+                : $valueArray;
     }
 
     /**
@@ -66,7 +83,7 @@ class MappableColumn extends Object
                 throw new NotSupportedException('Not implemented yet');
                 break;
             case self::TYPE_RELATION:
-                throw new NotSupportedException('Not implemented yet');
+                $entity->relatesTo[$this->field] = $value;
                 break;
             case self::TYPE_ATTRIBUTE:
             default:
@@ -84,6 +101,22 @@ class MappableColumn extends Object
         }
         if ($this->asDocumentScopeId === true) {
             $entity->documentScopeId = "{$entity->modelKey}###$value";
+        }
+    }
+
+    /**
+     * @param FormatMapper|object $mapper
+     */
+    public function postConfig(&$mapper)
+    {
+        if ($this->type === self::TYPE_RELATION) {
+            $modelClass = $mapper->entitiesDecl[$this->entity]['class'];
+            $model = new $modelClass;
+
+            $relationQuery = call_user_func([$model, 'get'.ucfirst($this->field)]);
+            $relatedClass = $relationQuery->modelClass;
+
+            $mapper->entitiesDecl[$this->entity]['depends'][] = $relatedClass;
         }
     }
 }
