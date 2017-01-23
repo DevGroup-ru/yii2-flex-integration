@@ -36,7 +36,7 @@ class AbstractEntity
     public $childEntities = [];
 
     /**
-     * @var EntityRelation[]
+     * @var array[]
      */
     public $relatesTo = [];
 

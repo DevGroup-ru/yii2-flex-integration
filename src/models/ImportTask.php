@@ -57,7 +57,7 @@ class ImportTask extends BaseTask
     {
         /** @var FormatReducer $formatReducer */
         $formatReducer = Yii::createObject($doc->formatReducer);
-        return $formatReducer->reduceToCollections($entities, $collections);
+        return $formatReducer->reduceToCollections($entities, $collections, $this->entitiesDecl);
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace DevGroup\FlexIntegration\format;
 
+use DevGroup\FlexIntegration\base\AbstractEntitiesPostProcessor;
 use DevGroup\FlexIntegration\base\AbstractEntity;
 use DevGroup\FlexIntegration\base\AbstractEntityCollection;
 use Yii;
@@ -17,10 +18,13 @@ abstract class FormatReducer extends Object
     public $onDuplicate = 'on-duplicate-skip';
 
     /**
-     * @param AbstractEntity[] $entities
-     * @param AbstractEntityCollection[]                           $collections
+     * @param AbstractEntity[]           $entities
+     * @param AbstractEntityCollection[] $collections
+     * @param array                      $entitiesDecl
      *
      * @return AbstractEntityCollection[]
      */
-    abstract public function reduceToCollections($entities, array &$collections);
+    abstract public function reduceToCollections($entities, array &$collections, array $entitiesDecl);
+
+
 }

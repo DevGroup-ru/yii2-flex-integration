@@ -28,8 +28,6 @@ trait Document2D
     /** @var MappableColumn[] */
     protected $processedSchema = [];
 
-
-
     /**
      * @param array  $row
      * @param string $schemaList

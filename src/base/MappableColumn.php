@@ -24,6 +24,11 @@ class MappableColumn extends Object
      */
     public $mappers = [];
 
+    /**
+     * @var array Configuration of relation searcher
+     */
+    public $relationSearchConfig = [];
+
     /** @var string entity key in AbstractEntityCollection */
     public $entity = '';
 

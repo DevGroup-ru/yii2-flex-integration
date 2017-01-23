@@ -4,8 +4,10 @@ use DevGroup\FlexIntegration\abstractEntity\mappers\Replace;
 use DevGroup\FlexIntegration\abstractEntity\mappers\TrimString;
 use DevGroup\FlexIntegration\abstractEntity\mappers\Typecast;
 use DevGroup\FlexIntegration\abstractEntity\mappers\UppercaseString;
+use DevGroup\FlexIntegration\abstractEntity\preProcessors\RelationFinder;
 use DevGroup\FlexIntegration\base\MappableColumn;
 use DevGroup\FlexIntegration\format\mappers\CSV;
+use DevGroup\FlexIntegration\format\reducers\DefaultReducer;
 use DevGroup\FlexIntegration\models\BaseTask;
 use DevGroup\FlexIntegration\models\ImportTask;
 use DevGroup\FlexIntegration\Tests\models\Product;
@@ -56,8 +58,18 @@ class ImportTest extends BaseTest
                         'class' => CSV::class,
                         'delimiter' => ';',
                         'skipLinesFromTop' => 1,
+                        'entitiesPostProcessors' => [
+                            'product' => [
+                                0 => [
+                                    'class' => RelationFinder::class,
+                                    'findByAttribute' => 'name',
+                                    'relationName' => 'categories',
+                                ],
+                            ],
+                        ],
                         'schema' => [
                             'defaultList' => [
+                                //! @todo Simplify as we have 1 entity per row always ???
                                 'entities' => [
                                     'product' => [
                                         'class' => 'DevGroup\FlexIntegration\Tests\models\Product',
@@ -110,6 +122,10 @@ class ImportTest extends BaseTest
                                 ],
                             ],
                         ],
+                    ],
+                    'formatReducer' => [
+                        'class' => DefaultReducer::class,
+
                     ],
                 ],
                 1 => [
@@ -178,5 +194,7 @@ class ImportTest extends BaseTest
         $collections = $task->prioritizeCollections($collections);
         // check prioritized order
         $this->assertSame(['category', 'product'], array_keys($collections));
+
+        codecept_debug($collections['product']);
     }
 }

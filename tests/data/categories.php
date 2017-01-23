@@ -2,7 +2,7 @@
 $faker = Faker\Factory::create();
 return [
     [
-        'name' => $faker->name(),
+        'name' => 'First category',
     ],
     [
         'name' => $faker->name(),

@@ -10,18 +10,28 @@ class DefaultReducer extends FormatReducer
 {
 
     /**
-     * @param AbstractEntity[] $entities
-     * @param AbstractEntityCollection[]                           $collections
+     * @param AbstractEntity[]           $entities
+     * @param AbstractEntityCollection[] $collections
+     * @param array                      $entitiesDecl
      *
      * @return AbstractEntityCollection[]
      */
-    public function reduceToCollections($entities, array &$collections)
+    public function reduceToCollections($entities, array &$collections, array $entitiesDecl)
     {
-        foreach ($entities as $entity) {
-            $this->ensureCollection($entity, $collections);
+        foreach ($entities as $item) {
+            $collectionKey = $item->modelKey;
 
-            $collections[$entity->modelKey]->put($entity, $this->onDuplicate);
+            if (array_key_exists($collectionKey, $collections) === false) {
+                $collection = new AbstractEntityCollection();
+                $collection->key = $collectionKey;
+
+                $collections[$collectionKey] = $collection;
+            }
+
+            $collections[$collectionKey]->put($item, $this->onDuplicate);
+
         }
+
         return $collections;
     }
 
@@ -31,9 +41,10 @@ class DefaultReducer extends FormatReducer
      */
     protected function ensureCollection(AbstractEntity $entity, array &$collections)
     {
-        if (isset($collections[$entity->modelKey])) {
+        if (array_key_exists($entity->modelKey, $collections)) {
             return;
         }
+
         $collection = new AbstractEntityCollection();
         $collection->key = $entity->modelKey;
 
