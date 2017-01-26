@@ -18,10 +18,11 @@ class CSV extends FormatMapper
     /**
      * @param \DevGroup\FlexIntegration\models\BaseTask $task
      * @param string $document
+     * @param string $sourceId
      *
      * @return AbstractEntity[]
      */
-    public function mapInputDocument(BaseTask $task, $document)
+    public function mapInputDocument(BaseTask $task, $document, $sourceId)
     {
         /** @var AbstractEntity[] $entities */
         $entities = [];
@@ -39,6 +40,8 @@ class CSV extends FormatMapper
             }
             $result = $this->processRow($data, md5($document));
             foreach ($result as $abstractEntity) {
+                // CSV files don't have sheets
+                $abstractEntity->sourceId = $sourceId;
                 $entities[] = $abstractEntity;
             }
         }

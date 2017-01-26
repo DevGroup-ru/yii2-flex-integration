@@ -39,56 +39,25 @@ abstract class FormatMapper extends Object
     /** @var array  */
     public $entitiesDecl = [];
 
-    /** @var array configurations */
-    public $entitiesPostProcessors = [];
+
 
     /**
      * @param \DevGroup\FlexIntegration\models\BaseTask $task
      * @param string $document
+     * @param string $sourceId
      *
      * @return AbstractEntity[]
      */
-    abstract public function mapInputDocument(BaseTask $task, $document);
-
-    public function init()
-    {
-        parent::init();
-        foreach ($this->entitiesPostProcessors as $entityKey => &$configs) {
-            foreach ($configs  as &$config) {
-                $config = Yii::createObject($config);
-            }
-        }
-    }
-
+    abstract public function mapInputDocument(BaseTask $task, $document, $sourceId);
 
     public function ensureEntitiesDeclOk()
     {
-        foreach ($this->entitiesDecl as &$value) {
+        foreach ($this->entitiesDecl as $key => $value) {
             if (false === array_key_exists('depends', $value)) {
-                $value['depends'] = [];
+                $this->entitiesDecl[$key]['depends'] = [];
             }
         }
     }
 
-    /**
-     * Pre processes the collection.
-     * Called before merging local collection to all collections list.
-     * Pre processors are configured per document.
-     *
-     * @param array $entities
-     * @param array $entitiesDecl
-     *
-     */
-    public function postProcessEntities(array &$entities, array $entitiesDecl)
-    {
-        foreach ($this->entitiesPostProcessors as $collectionKey => $processors) {
-            foreach ($processors as $processor) {
-                /** @var $processor AbstractEntitiesPostProcessor */
-                if (!is_object($processor)) {
-                    throw new \Exception('da fuck');
-                }
-                $processor->processEntities($entities, $collectionKey, $entitiesDecl);
-            }
-        }
-    }
+
 }

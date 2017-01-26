@@ -18,6 +18,8 @@ class DocumentConfiguration extends Model
         'class' => DefaultReducer::class,
     ];
 
+    public $entitiesPreProcessors = [];
+
     /**
      * @return string
      */

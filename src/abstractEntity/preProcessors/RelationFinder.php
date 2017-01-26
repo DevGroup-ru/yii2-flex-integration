@@ -54,15 +54,18 @@ class RelationFinder extends AbstractEntitiesPostProcessor
         if (count($this->joinWith) > 0) {
             $q->joinWith($this->joinWith);
         }
-        codecept_debug($q->createCommand()->rawSql);
+
         $dictionary = $q->asArray(true)->all();
 
         $dictionary = ArrayHelper::map(
             $dictionary,
             $this->findByAttribute,
-            'id'
+            function ($row) {
+                // currently we support ONLY non-composite numeric keys, lol
+                return (int) $row['id'];
+            }
         );
-        codecept_debug($dictionary);
+
 
         // bind attributes to values
         $notFound = [];

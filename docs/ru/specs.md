@@ -12,14 +12,15 @@
 1. Map input data to abstract entity
     - map input to abstract
 2. Reduce input data to abstract entity collection
-3. Prioritize and resolve dependencies, apply pre processing for entities(relations attributes -> id), combine searchQueries
-4. Map Each abstract entity to our models(find or create)
-    - map entity
-    - map entity properties
-    - repeat for related entities of this entity
-5. Reduce - push to db
+3. Prioritize and resolve dependencies, go by prioritized collections:
+    - Map Each abstract entity to our models(find or create)
+        - apply pre processing for entities(ie. relations attributes -> id)
+        - combine searchQueries and create model instances for new
+            - map entity
+            - map entity properties
+        - Reduce - push to db
 
-Общая логика для экспорта:
+Общая логика для экспорта(**БУДЕТ ПЕРЕРАБАТЫВАТЬСЯ, НЕ ФИНАЛЬНАЯ**):
 1. Combine search queries - db reducer
 2. Get entities as arrays
 3. Map models to abstract entities

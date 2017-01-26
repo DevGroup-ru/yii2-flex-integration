@@ -44,4 +44,7 @@ class AbstractEntity
      * @var Model mapped model
      */
     public $model;
+
+    /** @var string pair <document-index, sheet#> concatenated by ":" or just document-index */
+    public $sourceId;
 }
