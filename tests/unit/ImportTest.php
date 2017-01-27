@@ -1,5 +1,7 @@
 <?php
 
+use DevGroup\EntitySearch\base\BaseSearch;
+use DevGroup\EntitySearch\response\ResultResponse;
 use DevGroup\FlexIntegration\abstractEntity\mappers\Replace;
 use DevGroup\FlexIntegration\abstractEntity\mappers\TrimString;
 use DevGroup\FlexIntegration\abstractEntity\mappers\Typecast;
@@ -36,6 +38,40 @@ class ImportTest extends BaseTest
                 'dataFile' => __DIR__ . '/../data/product_category.php',
             ]
         ]);
+    }
+
+    public function testBaseSearch()
+    {
+        /** @var BaseSearch $searcher */
+        /** @var ResultResponse $response */
+        $searcher = Yii::$app->get('search');
+
+        $query = $searcher->search(Product::class)
+            ->relationAttributes([
+                'categories' => [
+                    'id' => [1]
+                ]
+            ])
+            ->order(['id' => SORT_ASC]);
+        $response = $query->ids();
+        $this->assertSame(['1', '2'], $response->ids);
+
+        $response = $query
+            ->relationAttributes([
+                'categories' => [
+                    'id' => 2
+                ],
+            ])->ids();
+        $this->assertSame(['1', '3'], $response->ids);
+
+        $response = $query
+            ->relationAttributes([
+                'categories' => [
+                    'id' => [1,2]
+                ],
+            ])->ids();
+        $this->assertSame(['1', '2', '3'], $response->ids);
+
     }
 
     // tests
@@ -195,6 +231,7 @@ class ImportTest extends BaseTest
 
         codecept_debug($collections['product']);
 
+        // run the whole process
         $task->run();
     }
 }

@@ -23,6 +23,6 @@ class Product extends ActiveRecord
     public function getCategories()
     {
         return $this->hasMany(Category::className(), ['id' => 'category_id'])
-            ->viaTable('{{%product_category}', ['product_id' => 'id']);
+            ->viaTable('{{%product_category}}', ['product_id' => 'id']);
     }
 }

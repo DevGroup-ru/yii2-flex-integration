@@ -19,6 +19,9 @@ $config = [
             'password' => '',
             'charset' => 'utf8',
         ],
+        'search' => [
+            'class' => 'DevGroup\EntitySearch\components\Search',
+        ],
     ],
 ];
 

@@ -2,8 +2,12 @@
 
 namespace DevGroup\FlexIntegration\abstractEntity\preProcessors;
 
+use DevGroup\EntitySearch\base\BaseSearch;
+use DevGroup\EntitySearch\base\SearchResponse;
+use DevGroup\EntitySearch\response\ResultResponse;
 use DevGroup\FlexIntegration\base\AbstractEntitiesPostProcessor;
 use DevGroup\FlexIntegration\errors\RelationNotFound;
+use Yii;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 use yii\helpers\ArrayHelper;
@@ -11,9 +15,16 @@ use yii\helpers\ArrayHelper;
 class RelationFinder extends AbstractEntitiesPostProcessor
 {
     public $relationName = '';
-    public $andWhere = [];
     public $findByAttribute = '';
-    public $joinWith = [];
+    /**
+     * @var array
+     */
+    public $mainEntityAttributes = [];
+
+    /**
+     * @var array
+     */
+    public $relationAttributes = [];
 
     public $notFoundBehavior = 'skip';
     const NOT_FOUND_SKIP = 'skip';
@@ -21,7 +32,6 @@ class RelationFinder extends AbstractEntitiesPostProcessor
 
     public function processEntities(array &$entities, $collectionKey = '', array $entitiesDecl)
     {
-
         $uniqueValues = [];
 
         foreach ($entities as $entity) {
@@ -33,8 +43,6 @@ class RelationFinder extends AbstractEntitiesPostProcessor
             }
         }
         $uniqueValues = array_unique($uniqueValues);
-        $values2find = ['or', [$this->findByAttribute => $uniqueValues]];
-
 
         // make dictionary [id => attribute]
         $className = $entitiesDecl[$collectionKey]['class'];
@@ -45,20 +53,18 @@ class RelationFinder extends AbstractEntitiesPostProcessor
         $modelClass = $relationQuery->modelClass;
 
         //! @todo ADD: If model supports tag cache - then cache
-        $q = $modelClass::find()
-            ->select(['id', $this->findByAttribute])
-            ->where($values2find);
-        if (count($this->andWhere) > 0) {
-            $q->andWhere($this->andWhere);
-        }
-        if (count($this->joinWith) > 0) {
-            $q->joinWith($this->joinWith);
-        }
 
-        $dictionary = $q->asArray(true)->all();
+        $q = $this->entitySearch()->search($modelClass)
+            ->limit(null);
+        $this->mainEntityAttributes[$this->findByAttribute] = $uniqueValues;
+        $q->mainEntityAttributes($this->mainEntityAttributes);
+
+
+        /** @var ResultResponse $dictionary */
+        $dictionary = $q->allArray();
 
         $dictionary = ArrayHelper::map(
-            $dictionary,
+            $dictionary->entities,
             $this->findByAttribute,
             function ($row) {
                 // currently we support ONLY non-composite numeric keys, lol
@@ -94,6 +100,13 @@ class RelationFinder extends AbstractEntitiesPostProcessor
             }
         }
         //! @todo Add log not found here somewhere - for SKIP behavior
+    }
 
+    /**
+     * @return \DevGroup\EntitySearch\base\BaseSearch|object
+     */
+    protected function entitySearch()
+    {
+        return Yii::$app->get('search');
     }
 }
