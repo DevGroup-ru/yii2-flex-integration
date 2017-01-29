@@ -83,20 +83,13 @@ class SiteController extends Controller
                                     3 => [
                                         'field' => 'categories',
                                         'type' => MappableColumn::TYPE_RELATION,
-                                        'mappers' => [
-                                            // find by attribute?
-                                        ],
+                                        'relationFinder' => [
+                                            'class' => RelationFinder::class,
+                                            'findByAttribute' => 'name',
+                                            'relationName' => 'categories',
+                                        ]
                                     ],
                                 ],
-                            ],
-                        ],
-                    ],
-                    'entitiesPreProcessors' => [
-                        'product' => [
-                            0 => [
-                                'class' => RelationFinder::class,
-                                'findByAttribute' => 'name',
-                                'relationName' => 'categories',
                             ],
                         ],
                     ],
@@ -130,7 +123,7 @@ class SiteController extends Controller
                                         'field' => 'name',
                                         'mappers' => [
                                             TrimString::class,
-                                            UppercaseString::class,
+//                                            UppercaseString::class,
                                         ],
                                     ],
                                 ],

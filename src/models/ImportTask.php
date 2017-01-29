@@ -2,6 +2,8 @@
 
 namespace DevGroup\FlexIntegration\models;
 
+use DevGroup\EntitySearch\base\SearchQuery;
+use DevGroup\FlexIntegration\abstractEntity\preProcessors\RelationFinder;
 use DevGroup\FlexIntegration\base\AbstractEntitiesPostProcessor;
 use DevGroup\FlexIntegration\base\AbstractEntity;
 use DevGroup\FlexIntegration\base\AbstractEntityCollection;
@@ -10,16 +12,55 @@ use DevGroup\FlexIntegration\errors\BaseException;
 use DevGroup\FlexIntegration\format\FormatMapper;
 use DevGroup\FlexIntegration\format\FormatReducer;
 use Yii;
+use yii\db\ActiveRecord;
 use yii\helpers\ArrayHelper;
 
 class ImportTask extends BaseTask
 {
     public $taskType = self::TASK_TYPE_IMPORT;
     /** @var array Entities declaration from schema, will be available after mapDoc */
-    protected $entitiesDecl = [];
+    public $entitiesDecl = [];
 
     /** @var array[]  */
-    protected $preProcessors = [];
+    public $preProcessors = [];
+
+    /**
+     * @var array Dependency counter is used for optimizing memory during relations linking.
+     *            The whole logic:
+     *            - Create dependency array: <"$entityKey:$identificationAttribute", counter>
+     *            - Counter is number of records that are depending on this record
+     *            - Once we linked any model to related - decrease the counter
+     *            - Once counter is zero - free memory
+     *            - Prioritize entities in collection by total number of dependent records DESC
+     *            - Related records with initial zero dependencies are not stored in RAM at all after
+     *              reduceCollection stage
+     *
+     *            And all the dependency array creation should be done on map input data(mapDoc) stage,
+     *            right after all columns for record are mapped(before pre processors are executed).
+     *
+     *            What's the trick:
+     *            Dictionary will cost less then storing all operated related records in RAM in most cases.
+     * @todo Concept should be remade.
+     *       Dependency array structure should be:
+     *       entityKey => [
+     *          "~~__$identificationAttribute" => counter,
+     *       ]
+     *       After preProcessing stage we should also replace identificationAttribute key with correct ID.
+     *       Example situation:
+     *       2 document uploads - categories and product.
+     *       In categories document there's a changed name in one category.
+     *       Products document is linking to NEW category name.
+     *       On RelationFinder stage we have the following algorithm:
+     *       - first check modelsCache for existing in RAM model instances(find by identification attribute)
+     *       - models that are not in cache - retrieve from db the way it is implemented now
+     *
+     *       PROBLEM:
+     *       ========================
+     *       We don't know on which attr model category should be indexed in deps chain before we done pre processing
+     *       for products.
+     *
+     */
+    public $dependencyCounter = [];
 
     /**
      * @param array $config
@@ -31,9 +72,13 @@ class ImportTask extends BaseTask
         /** @var AbstractEntityCollection[] $collections */
         $collections = [];
         $this->preProcessors = [];
+        $this->entitiesDecl = [];
+        $this->dependencyCounter = [];
+
         foreach ($this->documents as $documentIndex => $doc) {
             /** @var AbstractEntity[] $entities */
             $entities = $this->mapDoc($doc, $documentIndex);
+
             // reduce here
             $this->reduceDoc($doc, $entities, $collections);
             foreach ($doc->entitiesPreProcessors as $entityKey => $processorsByDocument) {
@@ -63,10 +108,7 @@ class ImportTask extends BaseTask
 
         // Go through prioritized collections
         foreach ($prioritizedCollectionKeys as $entityKey) {
-            if (isset($this->preProcessors[$entityKey]) === false) {
-                continue; // that's normal situation, all's ok
-            }
-            $processorsByDocument = $this->preProcessors[$entityKey];
+            $processorsByDocument = isset($this->preProcessors[$entityKey]) ? $this->preProcessors[$entityKey] : [];
             /** @var array $processorsByDocument */
             if (isset($collections[$entityKey]) === false) {
                 //! @todo Throw exception here as this can not be in real world, only with buggy hands
@@ -93,27 +135,227 @@ class ImportTask extends BaseTask
                         $processor->processEntities(
                             $entities,
                             $entityKey,
-                            $this->entitiesDecl
+                            $this
                         );
                     }
                 }
                 unset($entities);
             }
 
+
             //! @todo Add map to entity, insert&save here!
             //! @todo After we made all our great things - collection can be unset for freeing memory :-D
+
+            $this->reduceCollection($collections[$entityKey]);
+
+            gc_collect_cycles();
+            if (function_exists('gc_mem_caches')) {
+                gc_mem_caches();
+            }
+        }
+    }
+
+    public function reduceCollection(AbstractEntityCollection $collection)
+    {
+        $collectionClassName = $this->entitiesDecl[$collection->key]['class'];
+        /** @var SearchQuery $query */
+        $query = $this->entitySearch()
+            ->search($collectionClassName);
+
+        /** @var string[] $collectionPk2Index <int,string> pairs */
+        $collectionPk2Index = [];
+        $searchBy = [];
+        $foundCollectionIndexes = [];
+
+        foreach ($collection->entities as $index => $abstractEntity) {
+            $id = (int) $abstractEntity->pk;
+            if ($id > 0) {
+                $collectionPk2Index[$id] = $index;
+            }
+
+            if (count($abstractEntity->searchBy) > 0) {
+                foreach ($abstractEntity->searchBy as $key=>$values) {
+                    if (isset($searchBy[$key]) === false) {
+                        $searchBy[$key] = [];
+                    }
+                    foreach ((array) $values as $val) {
+                        $searchBy[$key][$val] = $index;
+                    }
+                }
+            }
+        }
+        if (count($collectionPk2Index) > 0) {
+            $query
+                ->mainEntityAttributes(['id' => array_keys($collectionPk2Index)]);
         }
 
-        codecept_debug($collections);
+        $dependantRelationFinders = [];
+        foreach ($this->entitiesDecl as $collectionKey => $item) {
+            if (isset($item['depends'][$collectionClassName])) {
+                $dependantRelationFinders[$collectionKey] = $item['depends'][$collectionClassName];
+            }
+        }
 
-//
-//        foreach ($collections as $entityKey => $collection) {
-//            /** @var AbstractEntityCollection $collection*/
-//            foreach ($collection->entities as &$entity) {
-//                /** @var $processor AbstractEntitiesPostProcessor */
-//                $processor->processEntities($entities, $collectionKey, $entitiesDecl);
-//            }
-//        }
+
+        $activeQuery = $query
+            ->query()
+            ->query;
+
+        // add with
+        $thisCollectionDepends = $this->entitiesDecl[$collection->key]['depends'];
+
+        $with = [];
+        foreach ($thisCollectionDepends as $bySources) {
+            foreach ($bySources as $item) {
+                $with[$item['relationName']] = 1;
+            }
+        }
+        $activeQuery->with(array_keys($with));
+
+        foreach ($searchBy as $key => $values) {
+            $activeQuery->orWhere([
+                $key => array_keys($values)
+            ]);
+        }
+
+        $finalResult = true;
+        // find old records
+        foreach ($activeQuery->each($this->batchSize) as $model) {
+            $id = (int) $model->id;
+            /** @var ActiveRecord $model */
+            if (!isset($collectionPk2Index[$id])) {
+                // this item was found not by ID - it was found by searchby
+                $collectionIndex = -1;
+                $caseInsensitive = false;
+                foreach ($searchBy as $attribute => $values) {
+                    $attributeValue = $model->getAttribute($attribute);
+                    $lowerCased = strtolower($attributeValue);
+
+                    foreach ($values as $key => $index) {
+                        if ($caseInsensitive === true) {
+                            if (strtolower($key) === $lowerCased) {
+                                $collectionIndex = $index;
+                                break;
+                            }
+                        } elseif ($key === $attributeValue) {
+                            $collectionIndex = $index;
+                            break;
+                        }
+                    }
+                    if ($collectionIndex !== -1) {
+                        break;
+                    }
+                }
+                if ($collectionIndex === -1) {
+                    continue;
+                }
+            } else {
+                $collectionIndex = $collectionPk2Index[$id];
+            }
+            $abstractEntity = $collection->entities[$collectionIndex];
+
+            $this->fillModelFromAbstractEntity($model, $abstractEntity);
+            $result = $model->save();
+            $finalResult = $finalResult && $result;
+            if ($result) {
+                // only saved models can be linked
+                $finalResult = $finalResult && $this->fillModelRelations($model, $abstractEntity);
+            }
+            //! @todo Add option to skip or throw errors
+
+            // put model to model cache
+            $this->putToModelCache($model, $dependantRelationFinders);
+            $foundCollectionIndexes[] = $collectionIndex;
+            unset($model);
+        }
+
+        // create new records
+        foreach ($collection->entities as $index => $abstractEntity) {
+            if (in_array($index, $foundCollectionIndexes)) {
+                continue;
+            }
+            $model = new $collectionClassName;
+            $this->fillModelFromAbstractEntity($model, $abstractEntity);
+            $model->id = null;
+            $result = $model->save();
+            $finalResult = $finalResult && $result;
+            if ($result) {
+                // only saved models can be linked
+                $finalResult = $finalResult && $this->fillModelRelations($model, $abstractEntity);
+            }
+            $this->putToModelCache($model, $dependantRelationFinders);
+            unset($model);
+        }
+
+        return $finalResult;
+    }
+
+    protected function putToModelCache(ActiveRecord &$model, $dependantRelationFinders)
+    {
+        $modelClassName = $model::className();
+        if (isset($this->dependencyCounter[$modelClassName]) === false) {
+            return;
+        }
+
+        foreach ($dependantRelationFinders as $collectionKey => $bySources) {
+            foreach ($bySources as $sourceId => $config) {
+                $attributeName = $config['findByAttribute'];
+                if (isset($this->dependencyCounter[$modelClassName][$attributeName]) === false) {
+                    continue;
+                }
+                $attributeValue = $model->getAttribute($attributeName);
+                if (isset($this->dependencyCounter[$modelClassName][$attributeName][$attributeValue]) === true) {
+                    $this->dependencyCounter[$modelClassName][$attributeName][$attributeValue]['model'] = &$model;
+                }
+            }
+        }
+    }
+
+    public function fillModelFromAbstractEntity(ActiveRecord &$model, AbstractEntity $entity)
+    {
+        $model->setAttributes(
+            $entity->attributes,
+            false
+        );
+    }
+
+    public function fillModelRelations(ActiveRecord &$model, AbstractEntity $entity)
+    {
+        foreach ($entity->relatesTo as $relationName => $newRelatedModels) {
+            $allRelated = $model->$relationName;
+            $idsOk = [];
+
+            $ids = array_keys($newRelatedModels);
+
+            foreach ($allRelated as $related) {
+                /** @var ActiveRecord $related */
+                $id = (int) $related->id;
+                if (in_array($id, $ids) === false) {
+                    $model->unlink($relationName, $related, true);
+                } else {
+                    $idsOk[] = $id;
+                }
+            }
+
+            foreach ($newRelatedModels as $related) {
+                $id = (int) $related->id;
+                if (in_array($id, $idsOk)) {
+                    continue;
+                }
+                $model->link($relationName, $related);
+                $idsOk[] = $id;
+            }
+        }
+        unset($entity->relatesTo);
+        return true;
+    }
+
+    /**
+     * @return \DevGroup\EntitySearch\base\BaseSearch|object
+     */
+    protected function entitySearch()
+    {
+        return Yii::$app->get('search');
     }
 
     /**
@@ -124,6 +366,7 @@ class ImportTask extends BaseTask
     {
         /** @var FormatMapper $formatMapper */
         $formatMapper = Yii::createObject($doc->formatMapper);
+        $formatMapper->task = &$this;
 
         $result = $formatMapper->mapInputDocument($this, $doc->importFilename(), $sourceId);
 
@@ -141,7 +384,7 @@ class ImportTask extends BaseTask
     {
         /** @var FormatReducer $formatReducer */
         $formatReducer = Yii::createObject($doc->formatReducer);
-        return $formatReducer->reduceToCollections($entities, $collections, $this->entitiesDecl);
+        return $formatReducer->reduceToCollections($entities, $collections, $this);
     }
 
     /**
@@ -158,7 +401,8 @@ class ImportTask extends BaseTask
 
         foreach ($this->entitiesDecl as $key => $decl) {
             $deps = [];
-            foreach ($decl['depends'] as $className) {
+            $classNameDepends = array_keys($decl['depends']);
+            foreach ($classNameDepends as $className) {
                 $dependencyKey = array_search($className, $entitiesDict, true);
                 if ($dependencyKey !== false) {
                     $deps[] = $dependencyKey;
@@ -209,11 +453,6 @@ class ImportTask extends BaseTask
         while (($index = array_search($item, $unresolved)) !== false) {
             unset($unresolved[$index]);
         }
-
-    }
-
-    public function combineSearchQueries(array $collections)
-    {
 
     }
 }

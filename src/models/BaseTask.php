@@ -31,6 +31,8 @@ abstract class BaseTask extends yii\base\Model
     /** @var string  */
     public $name = '';
 
+    public $batchSize = 50;
+
     /**
      * @param DocumentConfiguration[] $documents
      */

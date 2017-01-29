@@ -2,6 +2,6 @@ sku;name;price;category
 p1;"product uno";1.9;"Second category"
 p2;"product dos";1,1;"First category"
  EXS-123;" tres ";" $ 1 789,99";""
-;"empty sku";1.98;"3rd category with id=2"
+;"empty sku";1.98;"3rd category with id=2|"
 "p2";"dublicate of product dos";11,8;
-p5;"Product with 2 cats";1.83;"Second category|First category"
+p5;"Product with 2 cats";1.83;"3rd category with id=2|First category"

@@ -13,10 +13,13 @@ class Replace extends FieldMapper
 
     public function map($value)
     {
-        return $this->isRegExp ?
+        $val = $this->isRegExp ?
             preg_replace($this->search, $this->replace, $value) :
-            $this->caseInsensitive ?
-                str_ireplace($this->search, $this->replace, $value) :
-                str_replace($this->search, $this->replace, $value);
+            (
+                $this->caseInsensitive ?
+                    str_ireplace($this->search, $this->replace, $value) :
+                    str_replace($this->search, $this->replace, $value)
+            );
+        return $val;
     }
 }

@@ -38,7 +38,7 @@ class CSV extends FormatMapper
                 // we'r skipping first lines as specified
                 continue;
             }
-            $result = $this->processRow($data, md5($document));
+            $result = $this->processRow($data, $sourceId, md5($document));
             foreach ($result as $abstractEntity) {
                 // CSV files don't have sheets
                 $abstractEntity->sourceId = $sourceId;

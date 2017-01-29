@@ -24,6 +24,7 @@ class ImportTest extends BaseTest
     protected function _before()
     {
         parent::_before();
+
         $this->tester->haveFixtures([
             'categories' => [
                 'class' => \DevGroup\FlexIntegration\Tests\fixtures\Category::className(),
@@ -74,8 +75,7 @@ class ImportTest extends BaseTest
 
     }
 
-    // tests
-    public function testCSVImport()
+    protected function createTask()
     {
         $repository = $this->flex()->taskRepository;
 
@@ -131,7 +131,7 @@ class ImportTest extends BaseTest
                                             ],
                                             [
                                                 'class' => Replace::class,
-                                                'search' => '/[^0-9\.]/i',
+                                                'search' => '/[^0-9\\.]/i',
                                                 'replace' => '',
                                                 'isRegExp' => true,
                                             ],
@@ -141,20 +141,13 @@ class ImportTest extends BaseTest
                                     3 => [
                                         'field' => 'categories',
                                         'type' => MappableColumn::TYPE_RELATION,
-                                        'mappers' => [
-                                            // find by attribute?
-                                        ],
+                                        'relationFinder' => [
+                                            'class' => RelationFinder::class,
+                                            'findByAttribute' => 'name',
+                                            'relationName' => 'categories',
+                                        ]
                                     ],
                                 ],
-                            ],
-                        ],
-                    ],
-                    'entitiesPreProcessors' => [
-                        'product' => [
-                            0 => [
-                                'class' => RelationFinder::class,
-                                'findByAttribute' => 'name',
-                                'relationName' => 'categories',
                             ],
                         ],
                     ],
@@ -188,7 +181,7 @@ class ImportTest extends BaseTest
                                         'field' => 'name',
                                         'mappers' => [
                                             TrimString::class,
-                                            UppercaseString::class,
+//                                            UppercaseString::class,
                                         ],
                                     ],
                                 ],
@@ -202,6 +195,14 @@ class ImportTest extends BaseTest
         // create task
         $task = BaseTask::create(BaseTask::TASK_TYPE_IMPORT, $taskConfig);
         $this->assertInstanceOf(ImportTask::class, $task);
+
+        return $task;
+    }
+
+    // tests
+    public function testCSVImport()
+    {
+        $task = $this->createTask();
 
         // first - check every step
         $doc = $task->documents[0];
@@ -230,8 +231,86 @@ class ImportTest extends BaseTest
         $this->assertSame(['category', 'product'], array_keys($collections));
 
         codecept_debug($collections['product']);
+    }
 
+    public function testWholeProcess()
+    {
+        $db = Yii::$app->db;
+
+        /** @var Product $exs */
+        $exs = Product::findOne(['sku'=>'EXS-123']);
+        $this->assertCount(2, $exs->categories);
+        $this->assertCategoriesInList($exs, [1,2]);
+
+        $productsRows = $db->createCommand('select * from {{%product}} order by id asc')->queryAll();
+        $this->assertCount(3, $productsRows);
+        $task = $this->createTask();
         // run the whole process
         $task->run();
+
+        $productsRows = $db->createCommand('select * from {{%product}} order by id asc')->queryAll();
+        $this->assertCount(6, $productsRows);
+        $this->assertEquals(
+            [
+                'id' => '1',
+                'name' => 'tres',
+                'sku' => 'EXS-123',
+                'price' => 1789.99,
+            ],
+            $productsRows[0]
+        );
+
+        $this->assertEquals(
+            [
+                'id' => '4',
+                'name' => 'product uno',
+                'sku' => 'p1',
+                'price' => 1.9,
+            ],
+            $productsRows[3]
+        );
+
+        $this->assertEquals(
+            [
+                'id' => '5',
+                'name' => 'product dos',
+                'sku' => 'p2',
+                'price' => 1.1,
+            ],
+            $productsRows[4]
+        );
+
+        $productWith2Cats = Product::find()->with('categories')->where(['name' => 'Product with 2 cats'])->one();
+        $this->assertInstanceOf(Product::class, $productWith2Cats);
+        $this->assertEquals(
+            [
+                'id' => 6,
+                'sku' => 'p5',
+                'name' => 'Product with 2 cats',
+                'price' => 1.83,
+            ],
+            $productWith2Cats->attributes
+        );
+        $categories = $productWith2Cats->categories;
+        $this->assertCount(2, $categories);
+        $this->assertCategoriesInList($productWith2Cats, [1, 2]);
+
+        $productWithoutCats = Product::find()->where(['sku'=>'p1'])->one();
+        $this->assertInstanceOf(Product::class, $productWithoutCats);
+        $this->assertCount(0, $productWithoutCats->categories);
+
+        $exs = Product::findOne(['sku'=>'EXS-123']);
+        $this->assertCount(0, $exs->categories);
+        
+    }
+
+    protected function assertCategoriesInList($model, $categories)
+    {
+        foreach ($model->categories as $cat) {
+            $this->assertTrue(
+                in_array($cat->id, [1, 2]),
+                "Product $model->id categories not matching list of " . implode(',', $categories)
+            );
+        }
     }
 }

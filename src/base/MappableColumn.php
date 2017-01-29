@@ -3,7 +3,10 @@
 namespace DevGroup\FlexIntegration\base;
 
 use DevGroup\FlexIntegration\abstractEntity\mappers\FieldMapper;
+use DevGroup\FlexIntegration\abstractEntity\preProcessors\RelationFinder;
 use DevGroup\FlexIntegration\format\FormatMapper;
+use DevGroup\FlexIntegration\models\ImportTask;
+use Yii;
 use yii\base\NotSupportedException;
 use yii\base\Object;
 
@@ -48,6 +51,13 @@ class MappableColumn extends Object
      * @var string Delimiter used for joining multiple values for field.
      */
     public $multipleValuesDelimiter = '|';
+
+    public $relationFinder = [];
+
+    public $sourceId;
+
+    /** @var  ImportTask */
+    public $task;
 
     /**
      * @param string $value
@@ -116,12 +126,24 @@ class MappableColumn extends Object
     {
         if ($this->type === self::TYPE_RELATION) {
             $modelClass = $mapper->entitiesDecl[$this->entity]['class'];
-            $model = new $modelClass;
 
-            $relationQuery = call_user_func([$model, 'get'.ucfirst($this->field)]);
-            $relatedClass = $relationQuery->modelClass;
-
-            $mapper->entitiesDecl[$this->entity]['depends'][] = $relatedClass;
+            $relatedClass = RelationFinder::relationTarget($modelClass, $this->field);
+            if (isset($mapper->entitiesDecl[$this->entity]['depends'][$relatedClass]) === false) {
+                $mapper->entitiesDecl[$this->entity]['depends'][$relatedClass] = [];
+            }
+            if ($this->sourceId === null) {
+                throw new \Exception("FUCK NULL");
+            }
+            $mapper->entitiesDecl[$this->entity]['depends'][$relatedClass][$this->sourceId] = $this->relationFinder;
+            if (isset($this->task->preProcessors[$this->entity]) === false) {
+                $this->task->preProcessors[$this->entity] = [];
+            }
+            if (isset($this->task->preProcessors[$this->entity][$this->sourceId]) === false) {
+                $this->task->preProcessors[$this->entity][$this->sourceId] = [];
+            }
+            /** @var RelationFinder $instance */
+            $instance = Yii::createObject($this->relationFinder);
+            $this->task->preProcessors[$this->entity][$this->sourceId][] = $instance;
         }
     }
 }

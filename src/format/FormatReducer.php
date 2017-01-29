@@ -5,6 +5,7 @@ namespace DevGroup\FlexIntegration\format;
 use DevGroup\FlexIntegration\base\AbstractEntitiesPostProcessor;
 use DevGroup\FlexIntegration\base\AbstractEntity;
 use DevGroup\FlexIntegration\base\AbstractEntityCollection;
+use DevGroup\FlexIntegration\models\ImportTask;
 use Yii;
 use yii\base\Object;
 
@@ -20,11 +21,11 @@ abstract class FormatReducer extends Object
     /**
      * @param AbstractEntity[]           $entities
      * @param AbstractEntityCollection[] $collections
-     * @param array                      $entitiesDecl
+     * @param ImportTask                 $task
      *
      * @return AbstractEntityCollection[]
      */
-    abstract public function reduceToCollections($entities, array &$collections, array $entitiesDecl);
+    abstract public function reduceToCollections($entities, array &$collections, ImportTask &$task);
 
 
 }

@@ -6,6 +6,7 @@ use DevGroup\FlexIntegration\base\AbstractEntitiesPostProcessor;
 use DevGroup\FlexIntegration\base\AbstractEntity;
 use DevGroup\FlexIntegration\base\ConfigurableProcessor;
 use DevGroup\FlexIntegration\models\BaseTask;
+use DevGroup\FlexIntegration\models\ImportTask;
 use Yii;
 use yii\base\Object;
 
@@ -39,7 +40,8 @@ abstract class FormatMapper extends Object
     /** @var array  */
     public $entitiesDecl = [];
 
-
+    /** @var  ImportTask */
+    public $task;
 
     /**
      * @param \DevGroup\FlexIntegration\models\BaseTask $task

@@ -34,11 +34,11 @@ trait Document2D
      *
      * @return \DevGroup\FlexIntegration\base\AbstractEntity[]
      */
-    public function processRow($row, $schemaList = 'defaultList')
+    public function processRow($row, $sourceId, $schemaList = 'defaultList')
     {
         /** @var AbstractEntity[] Entities for this row */
         $entities = [];
-        $this->processedSchema = $this->prepareListSchema($schemaList);
+        $this->processedSchema = $this->prepareListSchema($sourceId, $schemaList);
         foreach ($this->processedSchema as $index => $mappableColumn) {
             if (isset($row[$index])) {
                 /** @var AbstractEntity $entity */
@@ -82,7 +82,7 @@ trait Document2D
      *
      * @return MappableColumn[]
      */
-    protected function prepareListSchema($schemaList = 'defaultList')
+    protected function prepareListSchema($sourceId, $schemaList = 'defaultList')
     {
         if (isset($this->listMappers[$schemaList]) === false) {
             $mappers = [];
@@ -141,7 +141,9 @@ trait Document2D
                 if ($mappableColumn->entity === '') {
                     $mappableColumn->entity = $defaultEntity;
                 }
+                $mappableColumn->sourceId = $sourceId;
                 $mappableColumn->mappers = $fieldMappers;
+                $mappableColumn->task = $this->task;
 
                 if (isset($this->entitiesDecl[$mappableColumn->entity]) === false) {
                     throw new \InvalidArgumentException('Field tries to map to undeclared entity: ' . $mappableColumn->entity);

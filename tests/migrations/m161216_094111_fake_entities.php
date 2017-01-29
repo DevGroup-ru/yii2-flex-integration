@@ -21,8 +21,8 @@ class m161216_094111_fake_entities extends Migration
             'category_id' => $this->integer()->unsigned()->notNull(),
         ]);
         $this->createIndex('pair', '{{%product_category}}', ['product_id', 'category_id'], true);
-        $this->addForeignKey('pcp', '{{%product_category}}', 'product_id', '{{%product}}', 'id', 'cascade', 'cascade');
-        $this->addForeignKey('pcc', '{{%product_category}}', 'category_id', '{{%category}}', 'id', 'cascade', 'cascade');
+//        $this->addForeignKey('pcp', '{{%product_category}}', 'product_id', '{{%product}}', 'id', 'cascade', 'cascade');
+//        $this->addForeignKey('pcc', '{{%product_category}}', 'category_id', '{{%category}}', 'id', 'cascade', 'cascade');
 
     }
 

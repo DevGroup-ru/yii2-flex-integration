@@ -2,11 +2,10 @@
 
 namespace DevGroup\FlexIntegration\abstractEntity\preProcessors;
 
-use DevGroup\EntitySearch\base\BaseSearch;
-use DevGroup\EntitySearch\base\SearchResponse;
 use DevGroup\EntitySearch\response\ResultResponse;
 use DevGroup\FlexIntegration\base\AbstractEntitiesPostProcessor;
 use DevGroup\FlexIntegration\errors\RelationNotFound;
+use DevGroup\FlexIntegration\models\ImportTask;
 use Yii;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
@@ -30,27 +29,68 @@ class RelationFinder extends AbstractEntitiesPostProcessor
     const NOT_FOUND_SKIP = 'skip';
     const NOT_FOUND_ERROR = 'error';
 
-    public function processEntities(array &$entities, $collectionKey = '', array $entitiesDecl)
+    public static $relationCache = [];
+
+    /**
+     * Helper function. Returns class name of relation's target model.
+     * The result is cached inside static variable
+     * Example:
+     * product <-> product_categories <-> category
+     * Calling `relationTarget(product::class, 'categories')` will return `category::class`
+     *
+     * @param string $modelClassName What model relates
+     * @param string $relationName The name of that relation.
+     *
+     * @return string
+     */
+    public static function relationTarget($modelClassName, $relationName)
     {
+        if (isset(static::$relationCache[$modelClassName]) === false) {
+            static::$relationCache[$modelClassName] = [];
+        }
+        if (isset(static::$relationCache[$modelClassName][$relationName]) === false) {
+            /** @var ActiveRecord $sampleModel */
+            $sampleModel = new $modelClassName;
+            /** @var ActiveQuery $relationQuery */
+            $relationQuery = $sampleModel->getRelation($relationName);
+            static::$relationCache[$modelClassName][$relationName] = $relationQuery->modelClass;
+        }
+        return static::$relationCache[$modelClassName][$relationName];
+    }
+
+    public function processEntities(array &$entities, $collectionKey = '', ImportTask &$task)
+    {
+        $entitiesDecl = &$task->entitiesDecl;
         $uniqueValues = [];
+
+        $className = $entitiesDecl[$collectionKey]['class'];
+
+        /** @var ActiveRecord $modelClass */
+        $modelClass = static::relationTarget($className, $this->relationName);
+
+        // make dictionary [id => attribute]
+        $dictionary = [];
 
         foreach ($entities as $entity) {
             if ($entity->modelKey === $collectionKey && isset($entity->relatesTo[$this->relationName])) {
                 $values = (array) $entity->relatesTo[$this->relationName];
+
                 foreach ($values as $val) {
-                    $uniqueValues[] = $val;
+                    if (empty($val)) {
+                        continue;
+                    }
+                    if (isset($task->dependencyCounter[$modelClass][$this->findByAttribute][$val]['model'])) {
+                        // fill dictionary with already known values
+                        $dictionary[$val] = &$task->dependencyCounter[$modelClass][$this->findByAttribute][$val]['model'];
+                    } else {
+
+                        $uniqueValues[] = $val;
+                    }
                 }
             }
         }
         $uniqueValues = array_unique($uniqueValues);
 
-        // make dictionary [id => attribute]
-        $className = $entitiesDecl[$collectionKey]['class'];
-        $sampleModel = new $className;
-        /** @var ActiveQuery $relationQuery */
-        $relationQuery = call_user_func([$sampleModel, 'get' . ucfirst($this->relationName)]);
-        /** @var ActiveRecord $modelClass */
-        $modelClass = $relationQuery->modelClass;
 
         //! @todo ADD: If model supports tag cache - then cache
 
@@ -60,17 +100,20 @@ class RelationFinder extends AbstractEntitiesPostProcessor
         $q->mainEntityAttributes($this->mainEntityAttributes);
 
 
-        /** @var ResultResponse $dictionary */
-        $dictionary = $q->allArray();
+        /** @var ResultResponse $result */
+        $result = $q->all();
 
-        $dictionary = ArrayHelper::map(
-            $dictionary->entities,
+        $result = ArrayHelper::map(
+            $result->entities,
             $this->findByAttribute,
-            function ($row) {
+            function (ActiveRecord &$row) {
                 // currently we support ONLY non-composite numeric keys, lol
-                return (int) $row['id'];
+                return $row;
             }
         );
+        /** @var array $result */
+
+        $dictionary = ArrayHelper::merge($dictionary, $result);
 
 
         // bind attributes to values
@@ -82,14 +125,16 @@ class RelationFinder extends AbstractEntitiesPostProcessor
                 $values = (array) $entity->relatesTo[$this->relationName];
                 foreach ($values as $value2search) {
                     if (isset($dictionary[$value2search])) {
-                        $newValues[] = $dictionary[$value2search];
+                        $related = &$dictionary[$value2search];
+                        $newValues[(int) $related->id] = &$related;
                     } else {
                         $notFound[] = $value2search;
                         if ($this->notFoundBehavior === self::NOT_FOUND_ERROR) {
                             throw new RelationNotFound('', [
                                 'valueSearched' => $value2search,
                                 'attributeSearched' => $this->findByAttribute,
-                                'conditions' => $this->andWhere,
+                                'mainEntityAttributes' => $this->mainEntityAttributes,
+                                'relationAttributes' => $this->relationAttributes,
                                 'model2search' => $modelClass,
                             ]);
                         }
@@ -99,6 +144,7 @@ class RelationFinder extends AbstractEntitiesPostProcessor
                 $entity->relatesTo[$this->relationName] = $newValues;
             }
         }
+        $notFound = array_unique($notFound);
         //! @todo Add log not found here somewhere - for SKIP behavior
     }
 
