@@ -301,7 +301,12 @@ class ImportTest extends BaseTest
 
         $exs = Product::findOne(['sku'=>'EXS-123']);
         $this->assertCount(0, $exs->categories);
-        
+
+        $this->assertNull(Product::findOne(['name' => 'empty sku']));
+        /** @var Product $p2 */
+        $p2 = Product::findOne(['sku' => 'p2']);
+        $this->assertCount(1, $p2->categories);
+        $this->assertCategoriesInList($p2, [1]);
     }
 
     protected function assertCategoriesInList($model, $categories)
