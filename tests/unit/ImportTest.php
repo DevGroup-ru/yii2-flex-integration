@@ -207,6 +207,7 @@ class ImportTest extends BaseTest
         // first - check every step
         $doc = $task->documents[0];
         $entities = $task->mapDoc($doc, 0);
+        codecept_debug($entities);
         $this->assertCount(5, $entities);
 
         // check reduce to collections

@@ -16,7 +16,8 @@
         "yiisoft/yii2": "^2.0.10",
         "devgroup/yii2-tag-dependency-helper": "~1.5",
         "devgroup/yii2-data-structure-tools": "dev-master",
-        "devgroup/yii2-entity-search": "*"
+        "devgroup/yii2-entity-search": "*",
+        "phpoffice/phpexcel": "^1.8"
     },
     "require-dev": {
         "devgroup/dotplant-dev": "~1.0",

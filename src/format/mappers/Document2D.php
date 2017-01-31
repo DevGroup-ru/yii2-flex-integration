@@ -40,7 +40,7 @@ trait Document2D
         $entities = [];
         $this->processedSchema = $this->prepareListSchema($sourceId, $schemaList);
         foreach ($this->processedSchema as $index => $mappableColumn) {
-            if (isset($row[$index])) {
+            if (array_key_exists($index, $row)) {
                 /** @var AbstractEntity $entity */
                 $entity = $this->ensureEntity($entities, $mappableColumn);
 
