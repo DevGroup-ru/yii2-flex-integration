@@ -21,6 +21,8 @@ class MappableColumn extends Object
     const TYPE_ATTRIBUTE = 'attribute';
     const TYPE_PROPERTY = 'property';
     const TYPE_RELATION = 'relation';
+    const TYPE_VIRTUAL = 'virtual';
+    const TYPE_PRICE = 'price';
 
     /**
      * @var FieldMapper[]
@@ -93,13 +95,22 @@ class MappableColumn extends Object
      */
     public function bindToEntity(AbstractEntity $entity, $value)
     {
+        if ($this->type === self::TYPE_VIRTUAL) {
+            return;
+        }
         switch ($this->type) {
             case self::TYPE_PROPERTY:
                 throw new NotSupportedException('Not implemented yet');
                 break;
+
             case self::TYPE_RELATION:
                 $entity->relatesTo[$this->field] = $value;
                 break;
+
+            case self::TYPE_PRICE:
+                $entity->prices[$this->field] = $value;
+                break;
+
             case self::TYPE_ATTRIBUTE:
             default:
                 $entity->attributes[$this->field] = $value;

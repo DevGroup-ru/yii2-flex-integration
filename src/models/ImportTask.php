@@ -11,6 +11,8 @@ use DevGroup\FlexIntegration\base\DocumentConfiguration;
 use DevGroup\FlexIntegration\errors\BaseException;
 use DevGroup\FlexIntegration\format\FormatMapper;
 use DevGroup\FlexIntegration\format\FormatReducer;
+use DotPlant\Store\models\goods\Goods;
+use DotPlant\Store\models\warehouse\GoodsWarehouse;
 use Yii;
 use yii\db\ActiveRecord;
 use yii\helpers\ArrayHelper;
@@ -256,6 +258,7 @@ class ImportTask extends BaseTask
 
             $this->fillModelFromAbstractEntity($model, $abstractEntity);
             $result = $model->save();
+            $this->modelAfterSave($model, $abstractEntity);
             $finalResult = $finalResult && $result;
             if ($result) {
                 // only saved models can be linked
@@ -278,6 +281,7 @@ class ImportTask extends BaseTask
             $this->fillModelFromAbstractEntity($model, $abstractEntity);
             $model->id = null;
             $result = $model->save();
+            $this->modelAfterSave($model, $abstractEntity);
             $finalResult = $finalResult && $result;
             if ($result) {
                 // only saved models can be linked
@@ -311,12 +315,49 @@ class ImportTask extends BaseTask
         }
     }
 
+    public function modelAfterSave(ActiveRecord &$model, AbstractEntity $entity)
+    {
+        if ($model instanceof Goods) {
+            foreach ($entity->prices as $warehouse_id => $value) {
+                $price = [
+                    'wholesale_price' => $value,
+                    'seller_price' => $value,
+                    'retail_price' => $value,
+                    'warehouse_id' => $warehouse_id,
+                    'is_allowed' => true,
+                    'currency_iso_code' => 'USD',
+                ];
+                $wh =  new GoodsWarehouse();
+                $wh->setAttributes($price);
+                $wh->goods_id = $model->id;
+                $wh->save();
+            }
+        }
+
+
+//        $model->save();
+    }
+
     public function fillModelFromAbstractEntity(ActiveRecord &$model, AbstractEntity $entity)
     {
+        $model->loadDefaultValues();
+
         $model->setAttributes(
             $entity->attributes,
             false
         );
+        if ($model->hasAttribute('slug') && empty($model->slug)) {
+            $model->slug = \yii\helpers\Inflector::slug($entity->attributes['name']);
+        }
+        if ($model->hasMethod('getDefaultTranslation')) {
+            $model->translate(1)->setAttributes(
+                $entity->attributes,
+                false
+            );
+            if ($model->translate(1)->hasAttribute('slug') && empty($model->translate(1)->slug)) {
+                $model->translate(1)->slug = \yii\helpers\Inflector::slug($entity->attributes['name']);
+            }
+        }
     }
 
     public function fillModelRelations(ActiveRecord &$model, AbstractEntity $entity)

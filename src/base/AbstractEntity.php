@@ -47,4 +47,6 @@ class AbstractEntity
 
     /** @var string pair <document-index, sheet#> concatenated by ":" or just document-index */
     public $sourceId;
+
+    public $prices = [];
 }
