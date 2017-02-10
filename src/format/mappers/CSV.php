@@ -56,7 +56,8 @@ class CSV extends FormatMapper implements MapperGeneratorInterface
         $objReader->setSheetIndex(0);
 
         $startRow = 0;
-        $chunkSize = 1000; /* @todo set configurable */
+        $chunkSize = 1000;
+        /* @todo set configurable */
         $chunkFilter = new ChunkReadFilter();
 
         $line = 0;
@@ -65,11 +66,18 @@ class CSV extends FormatMapper implements MapperGeneratorInterface
         while (!$exit) {
             $chunkFilter->setRows($startRow, $chunkSize);
             $objReader->setReadFilter($chunkFilter);
+            $objReader->setReadDataOnly(true);
             $objPHPExcel = $objReader->load($document);
             $objWorksheet = $objPHPExcel->setActiveSheetIndex(0);
 
-            $exit = true;
-            foreach ($objWorksheet->getRowIterator($startRow) as $row) {
+            try {
+                $inerator = $objWorksheet->getRowIterator($startRow);
+            } catch (\PHPExcel_Exception $e) {
+                $exit = true;
+                break;
+            }
+
+            foreach ($inerator as $row) {
                 $exit = false;
                 $line++;
                 if ($this->maxLines > 0 && $line === ($this->maxLines + $this->skipLinesFromTop)) {
