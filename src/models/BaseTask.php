@@ -39,8 +39,8 @@ abstract class BaseTask extends yii\base\Model
     public function setDocuments($documents)
     {
         $this->documents = [];
-        foreach ($documents as $doc) {
-            $this->documents[] = new DocumentConfiguration($doc);
+        foreach ($documents as $key => $doc) {
+            $this->documents[$key] = new DocumentConfiguration($doc);
         }
     }
 
