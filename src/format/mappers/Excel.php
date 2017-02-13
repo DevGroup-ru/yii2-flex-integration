@@ -10,14 +10,14 @@ use PHPExcel_Reader_CSV;
 use PHPExcel_Reader_Excel2007;
 use PHPExcel_Reader_Excel5;
 
-class Excel extends FormatMapper
+class Excel extends FormatMapper implements MapperGeneratorInterface
 {
     use Document2D;
 
     const FORMAT_EXCEL2007 = 'Excel2007';
     const FORMAT_EXCEL2003 = 'Excel2003';
-    const FORMAT_OOCALC= 'OOCALC';
-    const FORMAT_EXCEL5= 'Excel5';
+    const FORMAT_OOCALC = 'OOCALC';
+    const FORMAT_EXCEL5 = 'Excel5';
 
     public $format = 'Excel2007';
     public $office2003Compatibility = false;
@@ -34,6 +34,22 @@ class Excel extends FormatMapper
     {
         /** @var AbstractEntity[] $entities */
         $entities = [];
+
+        foreach($this->getGenerator($task, $document, $originalSourceId) as $entity) {
+            $entities[] = $entity;
+        }
+
+        return $entities;
+    }
+
+    /**
+     * @param BaseTask $task
+     * @param $document
+     * @param $originalSourceId
+     * @return \Generator
+     */
+    public function getGenerator(BaseTask $task, $document, $originalSourceId)
+    {
 
         $objReader = null;
         switch ($this->format) {
@@ -59,7 +75,6 @@ class Excel extends FormatMapper
 
         foreach ($sheets as $index => $objWorksheet) {
             $sheetId = $objWorksheet->hasCodeName() ? $objWorksheet->getCodeName() : "__$index";
-            codecept_debug($sheetId);
             $sourceId = $originalSourceId . ':' . $sheetId;
 
             foreach ($objWorksheet->getRowIterator() as $row) {
@@ -75,8 +90,12 @@ class Excel extends FormatMapper
                 }
 
 
-                $cellIterator = $row->getCellIterator();
-                $cellIterator->setIterateOnlyExistingCells(true);
+                try {
+                    $cellIterator = $row->getCellIterator();
+                    $cellIterator->setIterateOnlyExistingCells(true);
+                } catch (\PHPExcel_Exception $e) {
+                    continue;
+                }
                 $data = [];
                 /** @var \Iterator $cellIterator */
                 foreach ($cellIterator as $cell) {
@@ -89,10 +108,11 @@ class Excel extends FormatMapper
                 foreach ($result as $abstractEntity) {
                     // CSV files don't have sheets
                     $abstractEntity->sourceId = $sourceId;
-                    $entities[] = $abstractEntity;
+                    yield $abstractEntity;
                 }
             }
         }
-        return $entities;
     }
+
+
 }
