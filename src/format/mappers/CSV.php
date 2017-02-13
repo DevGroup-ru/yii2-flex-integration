@@ -55,7 +55,7 @@ class CSV extends FormatMapper implements MapperGeneratorInterface
         $objReader->setEnclosure($this->enclosure);
         $objReader->setSheetIndex(0);
 
-        $startRow = 0;
+        $startRow = 1;
         $chunkSize = 1000;
         /* @todo set configurable */
         $chunkFilter = new ChunkReadFilter();

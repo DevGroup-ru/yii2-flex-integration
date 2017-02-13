@@ -16,8 +16,8 @@ class Excel extends FormatMapper
 
     const FORMAT_EXCEL2007 = 'Excel2007';
     const FORMAT_EXCEL2003 = 'Excel2003';
-    const FORMAT_OOCALC= 'OOCALC';
-    const FORMAT_EXCEL5= 'Excel5';
+    const FORMAT_OOCALC = 'OOCALC';
+    const FORMAT_EXCEL5 = 'Excel5';
 
     public $format = 'Excel2007';
     public $office2003Compatibility = false;
@@ -59,7 +59,6 @@ class Excel extends FormatMapper
 
         foreach ($sheets as $index => $objWorksheet) {
             $sheetId = $objWorksheet->hasCodeName() ? $objWorksheet->getCodeName() : "__$index";
-            codecept_debug($sheetId);
             $sourceId = $originalSourceId . ':' . $sheetId;
 
             foreach ($objWorksheet->getRowIterator() as $row) {
@@ -75,8 +74,12 @@ class Excel extends FormatMapper
                 }
 
 
-                $cellIterator = $row->getCellIterator();
-                $cellIterator->setIterateOnlyExistingCells(true);
+                try {
+                    $cellIterator = $row->getCellIterator();
+                    $cellIterator->setIterateOnlyExistingCells(true);
+                } catch (\PHPExcel_Exception $e) {
+                    continue;
+                }
                 $data = [];
                 /** @var \Iterator $cellIterator */
                 foreach ($cellIterator as $cell) {
