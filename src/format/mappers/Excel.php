@@ -10,7 +10,7 @@ use PHPExcel_Reader_CSV;
 use PHPExcel_Reader_Excel2007;
 use PHPExcel_Reader_Excel5;
 
-class Excel extends FormatMapper
+class Excel extends FormatMapper implements MapperGeneratorInterface
 {
     use Document2D;
 
@@ -34,6 +34,22 @@ class Excel extends FormatMapper
     {
         /** @var AbstractEntity[] $entities */
         $entities = [];
+
+        foreach($this->getGenerator($task, $document, $originalSourceId) as $entity) {
+            $entities[] = $entity;
+        }
+
+        return $entities;
+    }
+
+    /**
+     * @param BaseTask $task
+     * @param $document
+     * @param $originalSourceId
+     * @return \Generator
+     */
+    public function getGenerator(BaseTask $task, $document, $originalSourceId)
+    {
 
         $objReader = null;
         switch ($this->format) {
@@ -92,10 +108,11 @@ class Excel extends FormatMapper
                 foreach ($result as $abstractEntity) {
                     // CSV files don't have sheets
                     $abstractEntity->sourceId = $sourceId;
-                    $entities[] = $abstractEntity;
+                    yield $abstractEntity;
                 }
             }
         }
-        return $entities;
     }
+
+
 }
