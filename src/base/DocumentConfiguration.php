@@ -7,18 +7,36 @@ use DevGroup\FlexIntegration\format\reducers\DefaultReducer;
 use Yii;
 use yii\base\Model;
 
+/**
+ * Class DocumentConfiguration
+ * @package DevGroup\FlexIntegration\base
+ */
 class DocumentConfiguration extends Model
 {
-    /** @var string  */
+    /** @var string */
     public $filename = '';
 
+    /**
+     * @var array
+     */
     public $formatMapper = [];
 
+    /**
+     * @var array
+     */
     public $formatReducer = [
         'class' => DefaultReducer::class,
     ];
 
+    /**
+     * @var array
+     */
     public $entitiesPreProcessors = [];
+
+    /**
+     * @var array
+     */
+    public $params = [];
 
     /**
      * @return string
