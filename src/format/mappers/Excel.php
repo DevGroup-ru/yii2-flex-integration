@@ -21,7 +21,7 @@ class Excel extends FormatMapper implements MapperGeneratorInterface
 
     public $format = 'Excel2007';
     public $office2003Compatibility = false;
-
+    public $activeSheetIndex = null;
 
     /**
      * @param \DevGroup\FlexIntegration\models\BaseTask $task
@@ -35,7 +35,7 @@ class Excel extends FormatMapper implements MapperGeneratorInterface
         /** @var AbstractEntity[] $entities */
         $entities = [];
 
-        foreach($this->getGenerator($task, $document, $originalSourceId) as $entity) {
+        foreach ($this->getGenerator($task, $document, $originalSourceId) as $entity) {
             $entities[] = $entity;
         }
 
@@ -69,6 +69,13 @@ class Excel extends FormatMapper implements MapperGeneratorInterface
         }
 
         $objReader->setReadDataOnly(true);
+
+        if ($this->activeSheetIndex !== null) {
+            $worksheetList = $objReader->listWorksheetNames($document);
+            $sheetname = $worksheetList[$this->activeSheetIndex];
+            $objReader->setLoadSheetsOnly($sheetname);
+        }
+
         $objPHPExcel = $objReader->load($document);
         $line = 0;
         $sheets = $objPHPExcel->getAllSheets();

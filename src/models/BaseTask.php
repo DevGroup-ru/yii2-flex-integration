@@ -7,6 +7,7 @@ use DevGroup\FlexIntegration\models\traits\TaskStorage;
 use yii;
 use yii\helpers\Json;
 
+
 /**
  * Class BaseTask
  *
@@ -28,7 +29,7 @@ abstract class BaseTask extends yii\base\Model
     /** @var DocumentConfiguration[] Input documents */
     protected $documents = [];
 
-    /** @var string  */
+    /** @var string */
     public $name = '';
 
     public $batchSize = 50;
@@ -40,7 +41,7 @@ abstract class BaseTask extends yii\base\Model
     {
         $this->documents = [];
         foreach ($documents as $key => $doc) {
-            $this->documents[$key] = new DocumentConfiguration($doc);
+            $this->documents[$key] = Yii::createObject(DocumentConfiguration::class, [$doc]);
         }
     }
 

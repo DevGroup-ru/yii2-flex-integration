@@ -61,6 +61,8 @@ class MappableColumn extends Object
     /** @var  ImportTask */
     public $task;
 
+    public $propertyMeta = [];
+
     /**
      * @param string $value
      *
@@ -71,7 +73,7 @@ class MappableColumn extends Object
         $valueArray =
             $this->multipleValuesDelimiter !== ''
                 ? explode($this->multipleValuesDelimiter, $value)
-                : [ $value ];
+                : [$value];
 
         foreach ($valueArray as &$item) {
             foreach ($this->mappers as $mapper) {
@@ -89,7 +91,7 @@ class MappableColumn extends Object
 
     /**
      * @param AbstractEntity $entity
-     * @param mixed          $value Mapped value
+     * @param mixed $value Mapped value
      *
      * @throws \yii\base\NotSupportedException
      */
@@ -100,7 +102,10 @@ class MappableColumn extends Object
         }
         switch ($this->type) {
             case self::TYPE_PROPERTY:
-                throw new NotSupportedException('Not implemented yet');
+                $entity->properties[$this->field] = [
+                    'value' => $value,
+                    'meta' => $this->propertyMeta
+                ];
                 break;
 
             case self::TYPE_RELATION:
